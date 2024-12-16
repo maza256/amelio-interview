@@ -59,6 +59,7 @@ class StockConsumer(
                                 setSumOfStocks(currentSumStocks)
                                 stocks = mergeMapData(groupedStockData[seconds]!!)
                             }
+                            groupedStockData.remove(seconds)
                         }
                     } else {
                         Thread.sleep(100)
