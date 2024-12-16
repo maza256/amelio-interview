@@ -1,0 +1,50 @@
+
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Maven specific files
+/target/
+
+# Gradle specific files
+.gradle/
+/build/
+
+# IDEA specific files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Eclipse specific files
+.classpath
+.project
+.settings/
+
+# Other IDE specific files
+*.vscode/
+.metadata/
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+*.stackdump
+
+# JAR files
+*.jar
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+~*~
+
+# Package Files
+*.war
+*.ear
+
