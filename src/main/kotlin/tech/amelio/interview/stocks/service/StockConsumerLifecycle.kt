@@ -5,12 +5,14 @@ import org.springframework.stereotype.Component
 
 @Component
 class StockConsumerLifecycle(
-    private val stockConsumer: StockConsumer
+   private val stockConsumer: StockConsumer
 ) : InitializingBean {
-
-    private val thread = Thread(stockConsumer)
-
     override fun afterPropertiesSet() {
-        thread.start()
+        
     }
+//   private val thread = stockConsumer.startConsuming()
+
+//    override fun afterPropertiesSet() {
+//        thread.start()
+//    }
 }
