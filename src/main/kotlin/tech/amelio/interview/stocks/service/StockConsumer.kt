@@ -1,8 +1,10 @@
 package tech.amelio.interview.stocks.service
 
+import jakarta.annotation.PostConstruct
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.springframework.stereotype.Service
+import tech.amelio.interview.stocks.models.PopularStockModel
 import tech.amelio.interview.stocks.models.StockMessage
 import tech.amelio.interview.stocks.models.StockModel
 import java.time.ZoneOffset
@@ -11,8 +13,18 @@ import java.util.concurrent.atomic.AtomicLong
 @Service
 class StockConsumer(
     private val channel: Channel<StockMessage>,  // Using channel instead of ConcurrentLinkedQueue
-    private val stockNameList: List<String>
+    private val stockNameList: List<String>,
+    private val coroutineScope: CoroutineScope
 ) {
+
+    @PostConstruct
+    fun init() {
+        // Start your coroutine task when the application initializes
+        coroutineScope.launch {
+            startConsuming()
+        }
+    }
+
 
     private var stocks = mutableMapOf<String, StockModel>().apply {
         stockNameList.forEach { name ->
@@ -29,6 +41,7 @@ class StockConsumer(
     private val messageCountExpected = stockNameList.size
     private val lock = Any()
     private var sumOfStocks = AtomicLong(0L)
+    private var publishedSecond = AtomicLong(0L)
 
     private val groupedStockData = HashMap<Int, HashMap<String, StockModel>>()
 
@@ -36,28 +49,35 @@ class StockConsumer(
         sumOfStocks.set(newSum)
     }
 
+    private fun processMessages(message: StockMessage) {
+        val seconds: Int = message.timestamp.atZone(ZoneOffset.UTC).second
+
+        var stockModel = StockModel(name = message.stockName, price = message.price, queryCount = 0)
+
+        groupedStockData.getOrPut(seconds) { HashMap() }
+        groupedStockData[seconds]?.set(message.stockName, stockModel)
+
+        if (groupedStockData[seconds]?.size == messageCountExpected &&
+            seconds.toLong() != publishedSecond.toLong()
+        ) {
+            val newSumOfStocks = groupedStockData[seconds]?.values?.map { it.price }?.sum() ?: 0L
+            setSumOfStocks(newSumOfStocks)
+            synchronized(lock) {
+                stocks = groupedStockData[seconds]!!
+            }
+            publishedSecond.set(seconds.toLong())
+            groupedStockData.remove(seconds)
+        }
+    }
+
     suspend fun startConsuming() {
         coroutineScope {
             launch(Dispatchers.Default) {
                 while (true) {
                     try {
-                        val message = channel.receive() // suspends until a message is available
-                        val seconds: Int = message.timestamp.atZone(ZoneOffset.UTC).second
-
-                        var stockModel = StockModel(name = message.stockName, price = message.price, queryCount = 0)
-
-                        groupedStockData.getOrPut(seconds) { HashMap() }
-                        groupedStockData[seconds]?.set(message.stockName, stockModel)
-
-                        if (groupedStockData[seconds]?.size == messageCountExpected) {
-                            val newSumOfStocks = groupedStockData[seconds]?.values?.map { it.price }?.sum() ?: 0L
-                            setSumOfStocks(newSumOfStocks)
-                            println("I'm here")
-                            synchronized(lock) {    
-                                stocks = groupedStockData[seconds]!!
-                            }
-                            groupedStockData.remove(seconds)
-                            println("Remove $seconds")
+                        val message = channel.tryReceive().getOrNull()
+                        if(message != null) {
+                            processMessages(message)
                         }
                     } catch (e: Exception) {
                         println("Error consuming message: ${e.message}")
@@ -82,13 +102,16 @@ class StockConsumer(
 
     fun getStock(name: String): StockModel? {
         synchronized(lock) {
-            return stocksQueries[name]?.apply { queryCount++ }
+            stocksQueries[name]?.apply { queryCount++ }
+            return stocks[name]
         }
     }
 
-    fun getPopularStocks(): List<String> {
+    fun getPopularStocks(): PopularStockModel {
         synchronized(lock) {
-            return stocksQueries.values.sortedByDescending { it.queryCount }.take(3).map { it.name }
+            var popularStocks = stocksQueries.values.sortedByDescending { it.queryCount }.take(3).map { it.name }
+            var stockModel =  PopularStockModel(popularStocks, publishedSecond.toString())
+            return stockModel
         }
     }
 

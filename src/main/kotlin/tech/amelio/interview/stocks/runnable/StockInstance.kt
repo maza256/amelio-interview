@@ -1,6 +1,7 @@
 package tech.amelio.interview.stocks.runnable
 
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.delay
 import tech.amelio.interview.stocks.logic.getNextStockPrice
 import tech.amelio.interview.stocks.models.StockMessage
@@ -24,10 +25,9 @@ class StockInstance(private val instanceName: String,
 
         while (running) {
             currentPrice = getNextStockPrice(instanceName, currentPrice)
-            println("Next price of $instanceName is $currentPrice")
             try {
                 val stockMessage = StockMessage(Instant.now(), currentPrice, instanceName)
-                queue.trySend(stockMessage)
+                val result = queue.trySend(stockMessage)  //queue.trySend(stockMessage)
             } catch(e: InterruptedException) {
                 print("I've been interrupted")
                 Thread.currentThread().interrupt()

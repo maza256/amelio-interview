@@ -1,5 +1,8 @@
 package tech.amelio.interview.stocks.configuration
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.Channel
 import org.apache.coyote.ProtocolHandler
 import org.apache.coyote.http11.Http11NioProtocol
@@ -29,7 +32,7 @@ class StockConfiguration {
 
     @Bean
     fun stockMessageQueue(): Channel<StockMessage> {
-        return Channel<StockMessage>()
+        return Channel<StockMessage>(capacity = numServices)
     }
 
     @Bean
@@ -38,12 +41,8 @@ class StockConfiguration {
     }
 
     @Bean
-    fun runner(
-        stockConsumer: StockConsumer
-    ): CommandLineRunner {
-        return CommandLineRunner {
-            print("Starting $numServices instances of the stock service...")
-        }
+    fun coroutineScope(): CoroutineScope {
+        return CoroutineScope(SupervisorJob() + Dispatchers.Default)
     }
 
     @Bean

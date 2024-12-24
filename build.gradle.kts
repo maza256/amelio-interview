@@ -27,6 +27,8 @@ dependencies {
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     testImplementation("io.mockk:mockk:1.13.7")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+	implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.10.1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.15.2")
 }
 
 kotlin {
